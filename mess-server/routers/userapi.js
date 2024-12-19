@@ -3,9 +3,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
-
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/users');
+
+const SECRET_KEY = process.env.SECRET_KEY;
+
+
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -39,13 +43,41 @@ router.post('/uploadImage', upload.single('profile_pic'), (req, res) => {
     res.json({ msg: 'File Uploaded Successfully', filePath: req.file.path });
 });
 
+
+//user login
+// http://localhost:5000/api/user/userlogin
+
+router.post('/userlogin',async(req,res)=>{
+    const email=req.body.user_email
+    const password=req.body.password
+
+    try {
+        const login= await User.findOne({user_email:email})
+        if(!login){
+            return res.json({'msg':'Email not found'})
+        }else{
+            if (await bcrypt.compare(password,login.password)){
+                const token=jwt.sign({userId:login.id},SECRET_KEY,{expiresIn:'1hr'})
+                return res.json({'msg':'login successfully',token})
+            }else{
+                return res.json({'msg':'Wrong Password'})
+            }
+        }
+    } catch (error) {
+        res.json(error)
+    }
+})
+
+
 // Add User Endpoint
+// http://localhost:5000/api/user/viewuser
 router.post('/adduser', async (req, res) => {
     try {
         const newUser = new User({
             user_name: req.body.user_name,
-            user_email: bcrypt.hashSync(req.body.user_email, 12),
-            gender: req.body.gender
+            user_email:req.body.user_email,
+            gender: req.body.gender,
+            password:await bcrypt.hash(req.body.password,12)
         });
 
         const userSave = await newUser.save();
