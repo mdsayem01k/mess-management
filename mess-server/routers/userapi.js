@@ -5,11 +5,11 @@ const path = require('path');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
-const User = require('../models/users');
+const User = require('../models/users');  // Ensure this path is correct for your User model
+const Token=require('../models/token');
+const { constrainedMemory } = require('process');
 
-const SECRET_KEY = process.env.SECRET_KEY;
-
-
+const SECRET_KEY = process.env.SECRET_KEY;  // Ensure the SECRET_KEY is set in your environment
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -40,44 +40,93 @@ router.post('/uploadImage', upload.single('profile_pic'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded!' });
     }
-    res.json({ msg: 'File Uploaded Successfully', filePath: req.file.path });
+    res.json({ msg: 'File uploaded successfully', filePath: req.file.path });
+});
+
+// User Login Endpoint
+router.post('/userlogin', async (req, res) => {
+    const { user_email, password } = req.body;
+
+    try {
+        // Find user by email
+        const login = await User.findOne({ user_email });
+
+        if (!login) {
+            return res.status(404).json({ msg: 'Email not found' });
+        }
+
+        // Log the stored hash for debugging
+        console.log('Stored password hash:', login.password);
+
+        // Compare the password with the stored hash
+        const isMatch = await bcrypt.compare(password, login.password);
+        console.log('Password match:', isMatch); // Check if passwords match
+
+        if (isMatch) {
+            const token = jwt.sign({ userId: login.id }, SECRET_KEY, { expiresIn: '1hr' });
+            const expireAt=new Date(Date.now()+60*60*1000)
+            const tokenSave=new Token({
+                userId:login._id,
+                token,
+                expireAt,
+            })
+
+            const uname=login.user_name
+            await tokenSave.save()
+            return res.json({ msg: 'Login successful',"uname":uname, token });
+        } else {
+            return res.status(400).json({ msg: 'Wrong password' });
+        }
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 });
 
 
-//user login
-// http://localhost:5000/api/user/userlogin
 
-router.post('/userlogin',async(req,res)=>{
-    const email=req.body.user_email
-    const password=req.body.password
+//checktoken
+
+router.post('/checktoken',async(req,res)=>{
+    const token=req.body.token
 
     try {
-        const login= await User.findOne({user_email:email})
-        if(!login){
-            return res.json({'msg':'Email not found'})
+        const tokencheck=await Token.findOne({token})
+        if(!tokencheck){
+            return res.json({'tokensts':1})
         }else{
-            if (await bcrypt.compare(password,login.password)){
-                const token=jwt.sign({userId:login.id},SECRET_KEY,{expiresIn:'1hr'})
-                return res.json({'msg':'login successfully',token})
-            }else{
-                return res.json({'msg':'Wrong Password'})
-            }
+            return res.json({'tokensts':0})
         }
     } catch (error) {
-        res.json(error)
+        console.error(error)
     }
 })
 
+//logout
 
+router.post('/logout', async (req, res) => {
+    const { token } = req.body;
+  
+    try {
+      const logout = await Token.findOneAndDelete({ token });
+      if (!logout) {
+        return res.json({ logoutsts: 1 }); // Logout failed: Token not found
+      }
+      return res.json({ logoutsts: 0 }); // Logout successful
+    } catch (error) {
+      console.error('Error during logout:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 // Add User Endpoint
-// http://localhost:5000/api/user/viewuser
 router.post('/adduser', async (req, res) => {
+    const { user_name, user_email, gender, password } = req.body;
+
     try {
         const newUser = new User({
-            user_name: req.body.user_name,
-            user_email:req.body.user_email,
-            gender: req.body.gender,
-            password:await bcrypt.hash(req.body.password,12)
+            user_name,
+            user_email,
+            gender,
+            password: await bcrypt.hash(password, 12),  // Hash the password before saving
         });
 
         const userSave = await newUser.save();
@@ -99,14 +148,15 @@ router.get('/viewuser', async (req, res) => {
 
 // View Single User by ID Endpoint
 router.get('/singleuser/:userid', async (req, res) => {
-    const uid = req.params.userid;
+    const { userid } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(uid)) {
+    // Check if the ID format is valid
+    if (!mongoose.Types.ObjectId.isValid(userid)) {
         return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     try {
-        const user = await User.findById(uid);
+        const user = await User.findById(userid);
 
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -120,11 +170,11 @@ router.get('/singleuser/:userid', async (req, res) => {
 
 // Update User by ID Endpoint
 router.put('/updateuser/:userid', async (req, res) => {
-    const uid = req.params.userid;
+    const { userid } = req.params;
 
     try {
         const user = await User.findByIdAndUpdate(
-            uid,
+            userid,
             { $set: req.body },
             { new: true }
         );
