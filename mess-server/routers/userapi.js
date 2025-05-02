@@ -60,6 +60,9 @@ router.post('/userlogin', async (req, res) => {
 
         // Compare the password with the stored hash
         const isMatch = await bcrypt.compare(password, login.password);
+        console.log("Hashed password from DB:", login.user_email);
+        console.log("Hashed password from DB:", login.password);
+
         console.log('Password match:', isMatch); // Check if passwords match
 
         if (isMatch) {

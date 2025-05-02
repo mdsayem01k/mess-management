@@ -1,23 +1,13 @@
+import React from 'react';
+import Navbar from './Navbar'; // adjust path if it's in a different folder
 
-
-
-import React from 'react'
-import {useNavigate} from 'react-router-dom'
-import WelcomePart from './WelcomePart'
-function Home() {
-    const navigate=useNavigate()
-    const token=localStorage.getItem('token')
-    const uname=localStorage.getItem('uname')
-    if(!token){
-        
-        navigate('/login')
-    }
+const Home = () => {
   return (
-    <div>home
-
-        <WelcomePart/>
+    <div>
+      <Navbar />
+      <h1>Welcome to Home Page</h1>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
