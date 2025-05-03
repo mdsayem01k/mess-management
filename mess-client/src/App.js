@@ -4,9 +4,15 @@ import React, { useEffect, useState } from 'react';
 import Login from './components/Login';
 import Home from './components/Home';
 import Registration from './components/Registration';
+import Navbar from './components/Navbar'
 import axios from 'axios';
+import Dashboard from './components/Dashboard';
 
 function App() {
+const [theme, setTheme] = useState('light')
+
+
+  // backend token check
   const token=localStorage.getItem('token')
   const[tokendt,setTockendt]=useState({
     token
@@ -30,15 +36,22 @@ function App() {
   },[])
 
   return (
-    <BrowserRouter>
-      <Routes>
-          <Route exact path='/' element={<Registration/>} />
-          <Route exact path='/login' element={<Login/>} />
-          <Route exact path='/home' element={<Home/>} />
-        
-      </Routes>
-    </BrowserRouter>
+    <div className='app'>
+      <div className="container">
+        <Navbar theme={theme} setTheme={setTheme} />
+      </div>
+      <div>
+        <BrowserRouter>
+          <Routes>
+            <Route exact path='/' element={<Registration />} />
+            <Route exact path='/login' element={<Login />} />
+            <Route exact path='/home' element={<Home />} />
+            <Route exact path='/dashboard' element={<Dashboard />} />
+          </Routes>
+        </BrowserRouter>
+      </div>
+    </div>
   );
+  
 }
-
 export default App;

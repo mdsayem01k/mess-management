@@ -1,10 +1,9 @@
 import React from 'react';
-import Navbar from './Navbar'; // adjust path if it's in a different folder
+
 
 const Home = () => {
   return (
-    <div>
-      <Navbar />
+    <div className="home-container">
       <h1>Welcome to Home Page</h1>
     </div>
   );
